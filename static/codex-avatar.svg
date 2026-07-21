@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 500" role="img" aria-labelledby="title desc">
+  <title id="title">Codex 赛博构筑角色</title>
+  <desc id="desc">一名穿着原创赛博装甲、携带终端护腕与技能芯片的未来角色。</desc>
+
+  <g stroke="#07090a" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M155 300 139 431l-27 31h73l12-153z" fill="#20282b" stroke-width="10"/>
+    <path d="m265 300 16 131 27 31h-73l-12-153z" fill="#20282b" stroke-width="10"/>
+    <path d="m157 322-10 105h40l8-105z" fill="#313b3e" stroke-width="5"/>
+    <path d="m263 322 10 105h-40l-8-105z" fill="#313b3e" stroke-width="5"/>
+    <path d="M104 453h84l-3 26h-91zM232 453h84l10 26h-91z" fill="#596368" stroke-width="8"/>
+    <path d="M109 462h70M242 462h69" fill="none" stroke="#00e6f0" stroke-width="4"/>
+
+    <path d="m145 159-57 31-31 112 51 16 30-61 7 72h130l7-72 30 61 51-16-31-112-57-31z" fill="#171d20" stroke-width="11"/>
+    <path d="m143 173-36 24-24 88 29 9 26-75zM277 173l36 24 24 88-29 9-26-75z" fill="#2b3438" stroke-width="6"/>
+    <path d="m116 198 20 27-26 23-18-31zM304 198l-20 27 26 23 18-31z" fill="#f1e900" stroke-width="5"/>
+    <path d="M146 164 210 204l64-40 10 176H136z" fill="#242c2f" stroke-width="7"/>
+    <path d="m146 164 41 23-22 34-31-31zM274 164l-41 23 22 34 31-31z" fill="#f1e900" stroke-width="6"/>
+    <path d="m166 188 44 102 44-102" fill="#0d1112" stroke="#07090a" stroke-width="7"/>
+    <path d="M190 199h40l8 84-28 28-28-28z" fill="#121719" stroke="#566166" stroke-width="5"/>
+    <path d="m210 224 18 13-7 28h-22l-7-28z" fill="#00e6f0" stroke-width="5"/>
+    <path d="m210 235 7 6-3 12h-8l-3-12z" fill="#f1e900" stroke-width="3"/>
+    <path d="M146 299h128v45H146z" fill="#151a1c" stroke-width="7"/>
+    <path d="M161 309h31v24h-31zM228 309h31v24h-31z" fill="#303a3e" stroke-width="4"/>
+    <path d="M170 316h13M237 316h13" fill="none" stroke="#f1e900" stroke-width="4"/>
+
+    <path d="m84 285-20 50 31 18 27-49z" fill="#313b3e" stroke-width="8"/>
+    <path d="m336 285 20 50-31 18-27-49z" fill="#313b3e" stroke-width="8"/>
+    <path d="M53 329h58v55H53z" fill="#171d20" stroke-width="7" transform="rotate(6 82 356)"/>
+    <path d="m66 344 30 3m-32 10 21 2m-23 10 34 3" fill="none" stroke="#00e6f0" stroke-width="4"/>
+    <path d="M311 330h55v52h-55z" fill="#ff3157" stroke-width="7" transform="rotate(-6 338 356)"/>
+    <path d="m326 344 25-3m-27 14 29-4m-26 14 17-2" fill="none" stroke="#111517" stroke-width="4"/>
+
+    <path d="M166 81h88v76l-44 30-44-30z" fill="#a87768" stroke-width="9"/>
+    <path d="M160 95V55l29-31h58l25 28-18 56-13-34-74 32z" fill="#121719" stroke-width="9"/>
+    <path d="m166 93 28-17 60-8" fill="none" stroke="#f1e900" stroke-width="7"/>
+    <path d="m253 69 20-18v62l-19 15z" fill="#263034" stroke-width="6"/>
+    <path d="m178 113 25-6 7 12-22 8zM214 108l26 4-5 15-22-8z" fill="#00e6f0" stroke-width="5"/>
+    <path d="m185 105 16-3m18 1 17 3" fill="none" stroke="#07090a" stroke-width="3"/>
+    <path d="m208 121-4 17 12 2" fill="none" stroke="#5e3f39" stroke-width="4"/>
+    <path d="m193 151 17 8 19-9" fill="none" stroke="#07090a" stroke-width="5"/>
+    <path d="M169 104h-17v35l19 12M252 105h13v34l-14 11" fill="#a87768" stroke-width="7"/>
+    <path d="M161 112h-8v19h8M257 112h8v19h-8" fill="#f1e900" stroke-width="4"/>
+    <path d="m237 82 8 17-4 39" fill="none" stroke="#ff3157" stroke-width="4"/>
+
+    <path d="M149 171 118 151l-33 18 27 21zM271 171l31-20 33 18-27 21z" fill="#20282b" stroke-width="6"/>
+    <path d="m100 165 18-8m202 8-18-8" fill="none" stroke="#00e6f0" stroke-width="4"/>
+
+    <path d="M76 390h43v15H76zM301 390h43v15h-43z" fill="#f1e900" stroke-width="5"/>
+    <path d="M187 347v21h46v-21" fill="#111517" stroke-width="6"/>
+    <path d="M199 355h22" fill="none" stroke="#00e6f0" stroke-width="4"/>
+  </g>
+</svg>

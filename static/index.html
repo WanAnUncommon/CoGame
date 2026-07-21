@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CoGame - Codex 角色构筑终端">
+  <title>CoGame // Character System</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body data-palette="night" data-display="standard">
+  <div class="screen-noise" aria-hidden="true"></div>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#dashboard" aria-label="CoGame 角色终端首页">
+        <span class="brand-index">77</span>
+        <span class="brand-copy">
+          <strong>COGAME</strong>
+          <small>CHARACTER SYSTEM // LOCAL</small>
+        </span>
+      </a>
+
+      <nav class="tabs" aria-label="主要页面">
+        <button class="tab is-active" type="button" data-view="dashboard" aria-selected="true"><span>01</span>角色</button>
+        <button class="tab" type="button" data-view="missions" aria-selected="false"><span>02</span>委托</button>
+        <button class="tab" type="button" data-view="wardrobe" aria-selected="false"><span>03</span>外观</button>
+      </nav>
+
+      <div class="scan-actions">
+        <div class="system-state">
+          <span class="connection-dot" aria-hidden="true"></span>
+          <span><b>LOCAL LINK</b><small id="scan-time">等待扫描</small></span>
+        </div>
+        <button class="refresh-button" id="refresh-button" type="button">
+          <span class="refresh-symbol" aria-hidden="true">↻</span>
+          扫描
+        </button>
+      </div>
+    </header>
+
+    <div class="notice" id="notice" role="status" aria-live="polite">正在读取本地 Codex 配置…</div>
+
+    <main>
+      <section class="view is-active" id="view-dashboard" aria-labelledby="dashboard-heading">
+        <h1 class="sr-only" id="dashboard-heading">Codex 角色构筑</h1>
+        <div class="hud-header" aria-hidden="true">
+          <span>COGAME PERSONA MATRIX / READ ONLY</span>
+          <span>CODEX UNIT // LOCAL NEURAL LINK</span>
+        </div>
+
+        <div class="dashboard-grid">
+          <aside class="loadout-column" aria-labelledby="equipment-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">LOADOUT // 装备</p>
+                <h2 id="equipment-heading">可用模组</h2>
+              </div>
+              <span class="count-badge" id="equipment-count">00</span>
+            </div>
+
+            <div class="capacity-line">
+              <span>MODULE CAPACITY</span>
+              <i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+
+            <div class="loadout-modules">
+              <div class="subsection subsection-mcp" id="mcp-section">
+                <h3><span>01</span>MCP // 工具芯片</h3>
+                <div class="item-list" id="mcp-list"></div>
+              </div>
+
+              <div class="subsection subsection-plugin" id="plugin-section">
+                <h3><span>02</span>PLUGIN // 插件芯片</h3>
+                <div class="item-list" id="plugin-list"></div>
+              </div>
+            </div>
+
+            <nav class="skill-pagination loadout-pagination" aria-label="可用模组翻页">
+              <button id="loadout-prev" type="button" aria-label="上一页模组"><span aria-hidden="true">‹</span>PREV</button>
+              <div class="page-track" aria-hidden="true"><i id="loadout-page-progress"></i></div>
+              <span id="loadout-page-number">00 / 00</span>
+              <button id="loadout-next" type="button" aria-label="下一页模组">NEXT<span aria-hidden="true">›</span></button>
+            </nav>
+
+            <div class="loadout-footer" aria-hidden="true"><span>LINK BUS</span><i></i><b>ONLINE</b></div>
+          </aside>
+
+          <section class="character-column" aria-labelledby="character-name">
+
+            <div class="avatar-stage">
+              <img id="avatar" src="/codex-avatar.svg" alt="装备赛博模组的原创 Codex 角色">
+            </div>
+
+          </section>
+
+          <aside class="skills-column" aria-labelledby="skills-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">CYBERDECK // 技能</p>
+                <h2 id="skills-heading">技能矩阵</h2>
+              </div>
+              <span class="count-badge cyan" id="skill-count">00</span>
+            </div>
+            <div class="skill-deck-bar">
+              <div class="skill-filter" aria-hidden="true"><span class="is-active">ALL</span><span>USER</span><span>SYSTEM</span></div>
+              <span class="deck-page" id="skill-page-status">PAGE 00 / 00</span>
+            </div>
+            <div class="skill-list" id="skill-list" aria-live="polite"></div>
+            <nav class="skill-pagination" aria-label="技能矩阵翻页">
+              <button id="skill-prev" type="button" aria-label="上一页技能"><span aria-hidden="true">‹</span>PREV</button>
+              <div class="page-track" aria-hidden="true"><i id="skill-page-progress"></i></div>
+              <span id="skill-page-number">00 / 00</span>
+              <button id="skill-next" type="button" aria-label="下一页技能">NEXT<span aria-hidden="true">›</span></button>
+            </nav>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" id="view-missions" aria-labelledby="missions-heading" hidden>
+        <div class="page-heading">
+          <div class="page-index">02</div>
+          <div><p class="eyebrow">CONTRACT DATABASE</p><h1 id="missions-heading">委托日志</h1><p>本地自动化任务及运行状态。</p></div>
+        </div>
+        <div class="mission-overview"><span>ACTIVE CONTRACTS</span><strong id="mission-overview-count">00</strong><i></i></div>
+        <div class="mission-list" id="mission-list"></div>
+      </section>
+
+      <section class="view" id="view-wardrobe" aria-labelledby="wardrobe-heading" hidden>
+        <div class="page-heading">
+          <div class="page-index">03</div>
+          <div><p class="eyebrow">APPEARANCE TERMINAL</p><h1 id="wardrobe-heading">外观配置</h1><p>配置仅保存在浏览器，不会写入 Codex。</p></div>
+        </div>
+
+        <div class="wardrobe-layout">
+          <div class="wardrobe-preview">
+            <span class="preview-code">UNIT // CODEX_01</span>
+            <div class="preview-frame" aria-hidden="true"></div>
+            <img id="wardrobe-avatar" src="/codex-avatar.svg" alt="当前角色外观预览">
+          </div>
+          <div class="wardrobe-controls">
+            <p class="terminal-label">// VISUAL CONFIG</p>
+            <fieldset>
+              <legend>能量配色</legend>
+              <div class="swatches" id="palette-options">
+                <button class="swatch is-selected" type="button" data-palette="night" aria-label="夜之黄" aria-pressed="true"><span class="swatch-night"></span><b>夜之黄</b></button>
+                <button class="swatch" type="button" data-palette="neural" aria-label="神经青" aria-pressed="false"><span class="swatch-neural"></span><b>神经青</b></button>
+                <button class="swatch" type="button" data-palette="alert" aria-label="警戒红" aria-pressed="false"><span class="swatch-alert"></span><b>警戒红</b></button>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>显示模式</legend>
+              <div class="segmented" id="display-options">
+                <button class="is-selected" type="button" data-display="standard" aria-pressed="true"><span>01</span>标准</button>
+                <button type="button" data-display="compact" aria-pressed="false"><span>02</span>紧凑</button>
+              </div>
+            </fieldset>
+
+            <div class="wardrobe-summary"><span>CURRENT LOADOUT</span><strong id="appearance-name">夜之黄 // 标准</strong></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="system-footer" aria-hidden="true"><span>COGAME.OS v0.1</span><i></i><span>PRIVACY MODE: ON</span><span>NO CLOUD SYNC</span></footer>
+  </div>
+
+  <template id="empty-template"><div class="empty-state"><span aria-hidden="true">[ NO DATA ]</span><p></p></div></template>
+  <script src="/app.js" defer></script>
+</body>
+</html>
