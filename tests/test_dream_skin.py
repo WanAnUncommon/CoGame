@@ -92,6 +92,7 @@ class BridgeCommandTests(unittest.TestCase):
             root,
             "Apply",
             status,
+            skin_id="0123456789abcdef",
             image_path=image,
             name="本地皮肤",
             restart_existing=True,
@@ -99,6 +100,8 @@ class BridgeCommandTests(unittest.TestCase):
 
         self.assertIn("-File", command)
         self.assertIn("-ImagePath", command)
+        self.assertIn("-SkinId", command)
+        self.assertIn("0123456789abcdef", command)
         self.assertIn(str(image.resolve()), command)
         self.assertIn("-RestartExisting", command)
         self.assertNotIn("-Command", command)

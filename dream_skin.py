@@ -380,6 +380,7 @@ def _bridge_command(
     root: Path,
     action: str,
     status: dict[str, Any],
+    skin_id: str | None = None,
     image_path: Path | None = None,
     name: str | None = None,
     restart_existing: bool = False,
@@ -398,6 +399,8 @@ def _bridge_command(
         "-Action",
         action,
     ]
+    if skin_id:
+        command.extend(["-SkinId", skin_id])
     if image_path is not None:
         command.extend(["-ImagePath", str(image_path.resolve())])
     if name:
@@ -450,6 +453,7 @@ def apply_skin(root: Path, skin_id: str, restart_existing: bool) -> dict[str, An
         root,
         "Apply",
         status,
+        skin_id=skin["id"],
         image_path=image_path,
         name=skin["name"],
         restart_existing=restart_existing,

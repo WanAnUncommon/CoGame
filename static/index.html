@@ -15,6 +15,7 @@
       <nav class="tabs" aria-label="主要页面">
         <button class="tab is-active" type="button" data-view="equipment" aria-selected="true">装备</button>
         <button class="tab" type="button" data-view="plugins" aria-selected="false">插件</button>
+        <button class="tab" type="button" data-view="rules" aria-selected="false">规则</button>
         <button class="tab" type="button" data-view="missions" aria-selected="false">任务</button>
         <button class="tab" type="button" data-view="wardrobe" aria-selected="false">装扮</button>
       </nav>
@@ -77,6 +78,31 @@
         </div>
       </section>
 
+      <section class="view" id="view-rules" aria-labelledby="rules-heading" hidden>
+        <div class="rules-layout">
+          <header class="rules-header">
+            <div>
+              <span class="rules-kicker">GLOBAL AGENT PROTOCOL</span>
+              <h1 id="rules-heading">全局 AGENTS.md</h1>
+              <span class="rules-path" id="rules-path">$CODEX_HOME/AGENTS.md</span>
+            </div>
+            <div class="rules-actions">
+              <span class="rules-state" id="rules-state" role="status" aria-live="polite">正在读取</span>
+              <button class="rules-reload" id="rules-reload" type="button" aria-label="重新载入全局规则" title="重新载入">↻</button>
+              <button class="rules-save" id="rules-save" type="button" disabled>保存规则</button>
+            </div>
+          </header>
+          <div class="rules-editor-frame">
+            <div class="rules-editor-gutter" aria-hidden="true">AGENT<br>RULES</div>
+            <textarea id="rules-editor" aria-label="全局 AGENTS.md 内容" autocomplete="off" autocapitalize="off" spellcheck="false" disabled></textarea>
+          </div>
+          <footer class="rules-meta" aria-hidden="true">
+            <span>UTF-8</span>
+            <span id="rules-character-count">0 CHAR</span>
+          </footer>
+        </div>
+      </section>
+
       <section class="view" id="view-missions" aria-labelledby="missions-heading" hidden>
         <h1 class="sr-only" id="missions-heading">任务</h1>
         <div class="mission-layout">
@@ -98,7 +124,6 @@
           <section class="skin-catalog" aria-labelledby="skin-catalog-heading">
             <header class="skin-catalog-header">
               <span id="skin-catalog-status">SCANNING</span>
-              <h2 id="skin-catalog-heading">可替换图片</h2>
             </header>
             <div class="skin-table-wrap">
               <table class="skin-table">

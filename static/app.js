@@ -37,6 +37,12 @@ const ui = {
   missionNext: document.getElementById("mission-next"),
   missionPageNumber: document.getElementById("mission-page-number"),
   missionPageTotal: document.getElementById("mission-page-total"),
+  rulesEditor: document.getElementById("rules-editor"),
+  rulesPath: document.getElementById("rules-path"),
+  rulesState: document.getElementById("rules-state"),
+  rulesReload: document.getElementById("rules-reload"),
+  rulesSave: document.getElementById("rules-save"),
+  rulesCharacterCount: document.getElementById("rules-character-count"),
   wardrobeBuildId: document.getElementById("wardrobe-build-id"),
   rulesStrip: document.getElementById("rules-strip"),
   skillStat: document.getElementById("skill-stat"),
@@ -62,6 +68,13 @@ let skins = [];
 let skinRuntimeStatus = null;
 let skinActionToken = "";
 let skinActionBusy = false;
+let rulesActionToken = "";
+let rulesRevision = "";
+let rulesOriginalContent = "";
+let rulesLineEnding = "\n";
+let rulesLoaded = false;
+let rulesDirty = false;
+let rulesBusy = false;
 const data = {
   skills: [],
   mcp: [],
@@ -496,6 +509,85 @@ async function loadState() {
   }
 }
 
+function setRulesState(message, tone = "") {
+  ui.rulesState.textContent = message;
+  ui.rulesState.className = `rules-state${tone ? ` is-${tone}` : ""}`;
+}
+
+function updateRulesControls() {
+  ui.rulesEditor.disabled = rulesBusy || !rulesLoaded;
+  ui.rulesReload.disabled = rulesBusy;
+  ui.rulesSave.disabled = rulesBusy || !rulesLoaded || !rulesDirty;
+  ui.rulesReload.classList.toggle("is-loading", rulesBusy);
+  ui.rulesCharacterCount.textContent = `${ui.rulesEditor.value.length} CHAR`;
+}
+
+function applyRulesPayload(payload, stateLabel = "已同步") {
+  rulesActionToken = payload.action_token || rulesActionToken;
+  rulesRevision = payload.revision;
+  rulesLineEnding = payload.content.includes("\r\n") ? "\r\n" : "\n";
+  ui.rulesEditor.value = payload.content;
+  rulesOriginalContent = ui.rulesEditor.value;
+  rulesLoaded = true;
+  rulesDirty = false;
+  ui.rulesPath.textContent = payload.path || "$CODEX_HOME/AGENTS.md";
+  setRulesState(payload.exists ? stateLabel : "新文件", "saved");
+  updateRulesControls();
+}
+
+async function loadRules() {
+  rulesBusy = true;
+  setRulesState("正在读取");
+  updateRulesControls();
+  try {
+    const response = await fetch("/api/rules", { cache: "no-store" });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.message || "全局规则读取失败");
+    applyRulesPayload(payload);
+  } catch (error) {
+    setRulesState(error.message, "error");
+  } finally {
+    rulesBusy = false;
+    updateRulesControls();
+  }
+}
+
+async function reloadRules() {
+  if (rulesDirty && !window.confirm("重新载入会丢弃尚未保存的规则修改。继续吗？")) return;
+  await loadRules();
+}
+
+async function saveRules() {
+  if (!rulesLoaded || !rulesDirty || rulesBusy) return;
+  if (!rulesActionToken) {
+    setRulesState("操作令牌缺失，请重新载入", "error");
+    return;
+  }
+
+  rulesBusy = true;
+  setRulesState("正在保存");
+  updateRulesControls();
+  const content = rulesLineEnding === "\r\n" ? ui.rulesEditor.value.replace(/\n/g, "\r\n") : ui.rulesEditor.value;
+  try {
+    const response = await fetch("/api/rules", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CoGame-Action-Token": rulesActionToken,
+      },
+      body: JSON.stringify({ content, revision: rulesRevision }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.message || "全局规则保存失败");
+    applyRulesPayload(payload, "已保存");
+  } catch (error) {
+    setRulesState(error.message, "error");
+  } finally {
+    rulesBusy = false;
+    updateRulesControls();
+  }
+}
+
 function selectView(viewName) {
   hideDetail();
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -586,6 +678,7 @@ function renderSkinTable() {
   const invalidCount = skins.filter((skin) => !skin.valid).length;
   ui.skinTotal.textContent = skins.length;
   ui.skinCatalogStatus.textContent = `${skins.length} FILES${invalidCount ? ` · ${invalidCount} ERRORS` : ""}`;
+  updateSkinStatusRows();
   updateSkinActions();
 }
 
@@ -626,6 +719,20 @@ function currentSkinId() {
   return savedSkin?.id || skins.find((skin) => skin.valid)?.id || null;
 }
 
+function activeSkinId() {
+  return skinRuntimeStatus?.session_configured ? skinRuntimeStatus.active_theme?.id || null : null;
+}
+
+function updateSkinStatusRows() {
+  const activeId = activeSkinId();
+  ui.skinTableBody.querySelectorAll("tr[data-skin-id]").forEach((row) => {
+    const skin = skins.find((item) => item.id === row.dataset.skinId);
+    const status = row.querySelector(".skin-status");
+    if (!skin?.valid || !status) return;
+    status.textContent = skin.id === activeId ? "应用中" : "可用";
+  });
+}
+
 function updateSkinActions() {
   const selected = skins.find((skin) => skin.id === selectedSkinId && skin.valid);
   ui.applySkin.disabled = skinActionBusy || !skinRuntimeStatus?.ready || !selected;
@@ -640,11 +747,13 @@ function setSkinRuntimeStatus(status) {
   ui.skinRuntimeIndicator.classList.toggle("is-error", !ready);
   ui.skinRuntimeLabel.textContent = ready ? "运行环境就绪" : "运行环境未就绪";
   if (ready) {
-    const session = status.session_configured ? "已配置会话" : "等待首次启动";
+    const activeTheme = status.session_configured ? status.active_theme : null;
+    const session = activeTheme?.name ? `当前皮肤：${activeTheme.name}` : status.session_configured ? "已配置会话" : "等待首次启动";
     ui.skinRuntimeDetail.textContent = `CODEX ${status.codex_version} · NODE ${status.node_version} · ${session}`;
   } else {
     ui.skinRuntimeDetail.textContent = status?.requirements?.join(" · ") || "无法读取 Dream Skin 状态";
   }
+  updateSkinStatusRows();
   updateSkinActions();
 }
 
@@ -762,8 +871,9 @@ async function restoreOfficialSkin() {
   }
 }
 
-async function refreshAll() {
-  await Promise.allSettled([loadState(), loadSkinCatalog(), loadSkinRuntimeStatus()]);
+async function refreshAll(forceRules = false) {
+  if (!forceRules && rulesDirty && !window.confirm("刷新会丢弃尚未保存的规则修改。继续吗？")) return;
+  await Promise.allSettled([loadState(), loadRules(), loadSkinCatalog(), loadSkinRuntimeStatus()]);
 }
 document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
   selectView(tab.dataset.view);
@@ -786,9 +896,16 @@ ui.pluginPrev.addEventListener("click", () => changePage("plugins", -1, renderPl
 ui.pluginNext.addEventListener("click", () => changePage("plugins", 1, renderPlugins));
 ui.missionPrev.addEventListener("click", () => changePage("missions", -1, renderMissions));
 ui.missionNext.addEventListener("click", () => changePage("missions", 1, renderMissions));
+ui.rulesEditor.addEventListener("input", () => {
+  rulesDirty = ui.rulesEditor.value !== rulesOriginalContent;
+  setRulesState(rulesDirty ? "有未保存更改" : "已同步", rulesDirty ? "dirty" : "saved");
+  updateRulesControls();
+});
+ui.rulesReload.addEventListener("click", reloadRules);
+ui.rulesSave.addEventListener("click", saveRules);
 ui.applySkin.addEventListener("click", applySelectedSkin);
 ui.restoreSkin.addEventListener("click", restoreOfficialSkin);
-ui.refreshButton.addEventListener("click", refreshAll);
+ui.refreshButton.addEventListener("click", () => refreshAll());
 
 if ("ResizeObserver" in window) {
   skillListResizeObserver = new ResizeObserver(scheduleSkillDescriptionFit);
@@ -799,9 +916,19 @@ if ("ResizeObserver" in window) {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") hideDetail();
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s" && !ui.rulesEditor.disabled) {
+    event.preventDefault();
+    saveRules();
+  }
+});
+
+window.addEventListener("beforeunload", (event) => {
+  if (!rulesDirty) return;
+  event.preventDefault();
+  event.returnValue = "";
 });
 
 const hashView = location.hash.slice(1) === "dashboard" ? "equipment" : location.hash.slice(1);
-const initialView = ["equipment", "plugins", "missions", "wardrobe"].includes(hashView) ? hashView : "equipment";
+const initialView = ["equipment", "plugins", "rules", "missions", "wardrobe"].includes(hashView) ? hashView : "equipment";
 selectView(initialView);
-refreshAll();
+refreshAll(true);

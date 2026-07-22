@@ -56,6 +56,32 @@
 .plugin-rail-right .plugin-card::after { right: 100%; transform: rotate(180deg); }
 .plugin-pagination { position: absolute; right: clamp(70px, 10vw, 205px); bottom: 74px; }
 
+.rules-layout {
+  display: flex; width: min(1180px, calc(100% - 80px)); min-height: calc(100vh - 78px); min-height: calc(100dvh - 78px);
+  margin: 0 auto; padding: 54px 0 82px; flex-direction: column;
+}
+.rules-header { display: flex; min-height: 86px; align-items: end; justify-content: space-between; gap: 36px; padding: 0 2px 18px; }
+.rules-header > div:first-child { min-width: 0; }
+.rules-kicker { display: block; color: var(--accent); font: var(--font-micro) var(--font-code); }
+.rules-header h1 { margin: 8px 0 0; color: var(--text); font-size: var(--font-page-title); font-weight: 500; }
+.rules-path { display: block; max-width: min(620px, 58vw); margin-top: 7px; overflow: hidden; color: var(--muted); font: var(--font-micro) var(--font-code); text-overflow: ellipsis; white-space: nowrap; }
+.rules-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; }
+.rules-state { margin-right: 8px; color: var(--muted); font: var(--font-micro) var(--font-code); white-space: nowrap; }
+.rules-state.is-dirty { color: var(--accent-bright); }
+.rules-state.is-saved { color: var(--ok); }
+.rules-state.is-error { color: var(--accent-bright); }
+.rules-actions button { min-height: 38px; border: 1px solid var(--line-soft); background: rgba(13, 4, 7, 0.72); color: var(--text); cursor: pointer; }
+.rules-actions button:hover:not(:disabled) { border-color: var(--accent-bright); color: #fff; }
+.rules-reload { display: grid; width: 38px; padding: 0; place-items: center; font-size: 19px; }
+.rules-reload.is-loading { animation: rotate 0.8s linear infinite; }
+.rules-save { min-width: 112px; padding: 0 18px; border-color: var(--accent) !important; background: rgba(92, 24, 31, 0.7) !important; }
+.rules-editor-frame { display: grid; min-height: 0; flex: 1; grid-template-columns: 84px minmax(0, 1fr); border: 1px solid var(--line); background: rgba(13, 4, 7, 0.74); overflow: hidden; }
+.rules-editor-gutter { padding: 22px 14px; border-right: 1px solid var(--line-soft); color: rgba(232, 74, 74, 0.42); font: var(--font-micro)/1.7 var(--font-code); text-align: right; }
+#rules-editor { width: 100%; min-height: 430px; padding: 22px 24px; resize: none; border: 0; outline: 0; background: transparent; color: var(--text); caret-color: var(--accent-bright); font: var(--font-primary)/1.75 var(--font-code); letter-spacing: 0; tab-size: 2; }
+#rules-editor::selection { background: rgba(232, 74, 74, 0.32); }
+#rules-editor:disabled { color: var(--muted); opacity: 1; }
+.rules-meta { display: flex; min-height: 30px; align-items: center; justify-content: flex-end; gap: 18px; padding: 0 2px; border-bottom: 1px solid var(--line-soft); color: var(--dim); font: var(--font-micro) var(--font-code); }
+
 .mission-layout, .wardrobe-layout {
   position: relative; display: grid; grid-template-columns: minmax(420px, 0.92fr) minmax(520px, 1fr);
   gap: clamp(70px, 14vw, 290px); width: min(1500px, calc(100% - 80px)); min-height: calc(100vh - 78px);
@@ -151,6 +177,7 @@
   .plugin-layout { grid-template-columns: minmax(340px, 1fr) minmax(280px, 0.72fr) minmax(340px, 1fr); padding-inline: 54px; }
   .plugin-rail { gap: 112px 24px; }
   .mission-layout, .wardrobe-layout { gap: 80px; width: min(1180px, calc(100% - 64px)); }
+  .rules-layout { width: min(1180px, calc(100% - 64px)); }
   .wardrobe-layout { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 40px; width: min(1240px, calc(100% - 64px)); }
 }
 
@@ -171,6 +198,7 @@
   .plugin-rail-right .plugin-card { justify-self: start !important; }
   .plugin-pagination { right: 50%; bottom: 62px; transform: translateX(50%); }
   .mission-layout, .wardrobe-layout { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 40px; width: calc(100% - 48px); padding-top: 54px; }
+  .rules-layout { width: calc(100% - 48px); }
   .skin-select { grid-template-columns: 104px minmax(0, 1fr); gap: 14px; }
   .skin-thumbnail { width: 104px; }
 }
@@ -186,6 +214,14 @@
 
   .brand, .refresh-button { width: 32px; height: 32px; }
   .equipment-layout, .plugin-layout, .mission-layout, .wardrobe-layout { display: flex; width: 100%; min-height: auto; padding: 18px 18px 88px; flex-direction: column; gap: 34px; }
+  .rules-layout { width: 100%; min-height: calc(100dvh - 64px); padding: 24px 18px 72px; }
+  .rules-header { align-items: stretch; flex-direction: column; gap: 18px; }
+  .rules-path { max-width: calc(100vw - 36px); }
+  .rules-actions { justify-content: flex-end; }
+  .rules-state { margin-right: auto; }
+  .rules-editor-frame { grid-template-columns: 52px minmax(0, 1fr); min-height: 560px; }
+  .rules-editor-gutter { padding-inline: 8px; }
+  #rules-editor { min-height: 560px; padding: 18px 16px; }
   .equipment-layout .character-stage, .plugin-layout .character-stage { order: -1; width: 100%; min-height: 420px; }
   .character-image { height: 430px; }
   .data-zone { width: 100%; }
@@ -218,6 +254,8 @@
     --font-primary: 13px;
   }
   .topbar { grid-template-columns: 26px minmax(0, 1fr) 32px; padding-inline: 10px; }
+  .rules-state { max-width: 92px; overflow: hidden; text-overflow: ellipsis; }
+  .rules-save { min-width: 88px; padding-inline: 12px; }
 
   .skill-grid, .mcp-grid { grid-template-columns: 1fr; }
   .plugin-rail { grid-template-columns: 1fr; }

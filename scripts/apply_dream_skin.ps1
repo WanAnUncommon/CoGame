@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
   [ValidateSet('Apply', 'Restore')]
@@ -6,6 +6,7 @@ param(
 
   [string]$ImagePath,
   [string]$Name,
+  [string]$SkinId,
   [switch]$RestartExisting
 )
 
@@ -19,6 +20,7 @@ try {
   $stateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
   $engineRoot = Join-Path $stateRoot 'engine'
   $runtimeScripts = Join-Path $engineRoot 'scripts'
+  $commonScript = Join-Path $runtimeScripts 'common-windows.ps1'
   $themeScript = Join-Path $runtimeScripts 'theme-windows.ps1'
   $startScript = Join-Path $runtimeScripts 'start-dream-skin.ps1'
   $restoreScript = Join-Path $runtimeScripts 'restore-dream-skin.ps1'
@@ -31,7 +33,7 @@ try {
     }
   }
 
-  foreach ($required in @($themeScript, $startScript, $restoreScript)) {
+  foreach ($required in @($commonScript, $themeScript, $startScript, $restoreScript)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
       throw "Codex Dream Skin runtime is incomplete: $required"
     }
@@ -42,15 +44,18 @@ try {
 
   if ($Action -eq 'Apply') {
     if (-not $ImagePath) { throw 'ImagePath is required for Apply.' }
+    if ($SkinId -notmatch '^[0-9a-f]{16}$') { throw 'A valid SkinId is required for Apply.' }
     $fullImagePath = [System.IO.Path]::GetFullPath($ImagePath)
     if (-not (Test-Path -LiteralPath $fullImagePath -PathType Leaf)) {
       throw "Skin image does not exist: $fullImagePath"
     }
 
+    . $commonScript
     . $themeScript
+    $theme = [pscustomobject]@{ id = $SkinId; name = $Name }
     $null = Set-DreamSkinActiveTheme `
       -ImagePath $fullImagePath `
-      -Theme $null `
+      -Theme $theme `
       -Name $Name `
       -StateRoot $stateRoot
     Set-DreamSkinPaused -Paused $false -StateRoot $stateRoot | Out-Null
