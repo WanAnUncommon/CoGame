@@ -1,0 +1,22 @@
+{
+  "gothic-void.jpg": {
+    "name": "哥特虚空远征",
+    "description": "原始哥特科幻纯背景，保留深红祭坛与远景层次",
+    "source": "Codex Dream Skin"
+  },
+  "gothic-crimson.jpg": {
+    "name": "猩红圣坛",
+    "description": "增强暖红区域，适合深色 Codex 外观",
+    "source": "本地调色"
+  },
+  "gothic-cyan.jpg": {
+    "name": "冷青远征",
+    "description": "降低暖色并强化冷青光源，适合高对比界面",
+    "source": "本地调色"
+  },
+  "gothic-ash.jpg": {
+    "name": "灰烬圣所",
+    "description": "低饱和灰阶版本，减少任务页面的视觉干扰",
+    "source": "本地调色"
+  }
+}

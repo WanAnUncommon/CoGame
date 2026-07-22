@@ -1,372 +1,470 @@
-const SKILLS_PER_PAGE = 6;
-const LOADOUT_ITEMS_PER_PAGE = 4;
+const PAGE_SIZE = {
+  skills: 9,
+  mcp: 9,
+  plugins: 12,
+  missions: 4,
+};
 
 const ui = {
   notice: document.getElementById("notice"),
   refreshButton: document.getElementById("refresh-button"),
   scanTime: document.getElementById("scan-time"),
-  mcpList: document.getElementById("mcp-list"),
-  pluginList: document.getElementById("plugin-list"),
-  mcpSection: document.getElementById("mcp-section"),
-  pluginSection: document.getElementById("plugin-section"),
-  loadoutPrev: document.getElementById("loadout-prev"),
-  loadoutNext: document.getElementById("loadout-next"),
-  loadoutPageNumber: document.getElementById("loadout-page-number"),
-  loadoutPageProgress: document.getElementById("loadout-page-progress"),
   skillList: document.getElementById("skill-list"),
+  skillCount: document.getElementById("skill-count"),
+  skillTotal: document.getElementById("skill-total"),
   skillPrev: document.getElementById("skill-prev"),
   skillNext: document.getElementById("skill-next"),
-  skillPageStatus: document.getElementById("skill-page-status"),
   skillPageNumber: document.getElementById("skill-page-number"),
-  skillPageProgress: document.getElementById("skill-page-progress"),
+  skillPageTotal: document.getElementById("skill-page-total"),
+  mcpList: document.getElementById("mcp-list"),
+  mcpCount: document.getElementById("mcp-count"),
+  mcpTotal: document.getElementById("mcp-total"),
+  mcpPrev: document.getElementById("mcp-prev"),
+  mcpNext: document.getElementById("mcp-next"),
+  mcpPageNumber: document.getElementById("mcp-page-number"),
+  mcpPageTotal: document.getElementById("mcp-page-total"),
+  pluginLeft: document.getElementById("plugin-left"),
+  pluginRight: document.getElementById("plugin-right"),
+  pluginTotal: document.getElementById("plugin-total"),
+  pluginPrev: document.getElementById("plugin-prev"),
+  pluginNext: document.getElementById("plugin-next"),
+  pluginPageNumber: document.getElementById("plugin-page-number"),
+  pluginPageTotal: document.getElementById("plugin-page-total"),
   missionList: document.getElementById("mission-list"),
-  equipmentCount: document.getElementById("equipment-count"),
-  skillCount: document.getElementById("skill-count"),
+  missionDetail: document.getElementById("mission-detail"),
+  missionTotal: document.getElementById("mission-total"),
+  missionPrev: document.getElementById("mission-prev"),
+  missionNext: document.getElementById("mission-next"),
+  missionPageNumber: document.getElementById("mission-page-number"),
+  missionPageTotal: document.getElementById("mission-page-total"),
+  wardrobeBuildId: document.getElementById("wardrobe-build-id"),
+  rulesStrip: document.getElementById("rules-strip"),
   skillStat: document.getElementById("skill-stat"),
   gearStat: document.getElementById("gear-stat"),
   missionStat: document.getElementById("mission-stat"),
-  missionOverviewCount: document.getElementById("mission-overview-count"),
-  projectName: document.getElementById("project-name"),
-  characterClass: document.getElementById("character-class"),
-  characterLevel: document.getElementById("character-level"),
-  buildId: document.getElementById("build-id"),
-  rulesStrip: document.getElementById("rules-strip"),
   appearanceName: document.getElementById("appearance-name"),
+  skinPreviewMeta: document.getElementById("skin-preview-meta"),
+  skinTableBody: document.getElementById("skin-table-body"),
+  skinTotal: document.getElementById("skin-total"),
+  skinCatalogStatus: document.getElementById("skin-catalog-status"),
+  skinCatalogWarning: document.getElementById("skin-catalog-warning"),
+  wardrobeAvatar: document.getElementById("wardrobe-avatar"),
+  wardrobePreview: document.querySelector(".wardrobe-preview"),
+  skinRuntimeIndicator: document.getElementById("skin-runtime-indicator"),
+  skinRuntimeLabel: document.getElementById("skin-runtime-label"),
+  skinRuntimeDetail: document.getElementById("skin-runtime-detail"),
+  applySkin: document.getElementById("apply-skin"),
+  restoreSkin: document.getElementById("restore-skin"),
+  detailPopover: document.getElementById("detail-popover"),
 };
 
-const sourceNames = {
-  user: "USER CHIP",
-  system: "SYSTEM CHIP",
-  plugin: "PLUGIN CHIP",
+let skins = [];
+let skinRuntimeStatus = null;
+let skinActionToken = "";
+let skinActionBusy = false;
+const data = {
+  skills: [],
+  mcp: [],
+  plugins: [],
+  missions: [],
 };
 
-const paletteNames = {
-  night: "夜之黄",
-  neural: "神经青",
-  alert: "警戒红",
+const pages = {
+  skills: 0,
+  mcp: 0,
+  plugins: 0,
+  missions: 0,
 };
 
-const displayNames = {
-  standard: "标准",
-  compact: "紧凑",
-};
+let selectedMissionId = null;
+let selectedSkinId = null;
 
-let skillItems = [];
-let skillPage = 0;
-let loadoutItems = [];
-let loadoutPage = 0;
-
-
-function clear(element) {
-  element.replaceChildren();
+function normalizedText(value, fallback = "NO DATA") {
+  if (typeof value !== "string" || !value.trim()) {
+    return fallback;
+  }
+  return value.trim().replace(/\s+/g, " ");
 }
 
-
-function compactText(value, fallback = "NO DESCRIPTION", maxLength = 116) {
+function compactText(value, fallback = "NO DATA", maxLength = 72) {
   if (typeof value !== "string" || !value.trim()) {
     return fallback;
   }
   const normalized = value.trim().replace(/\s+/g, " ");
-  return normalized.length > maxLength
-    ? `${normalized.slice(0, maxLength - 1)}…`
-    : normalized;
+  return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}…` : normalized;
 }
 
+function hideDetail() {
+  ui.detailPopover.classList.remove("is-visible");
+  ui.detailPopover.hidden = true;
+}
 
-function initials(name, fallback) {
-  const parts = String(name || "").trim().split(/[\s_-]+/).filter(Boolean);
-  if (!parts.length) {
-    return fallback;
+function detailFields(kind, item) {
+  if (kind === "mcp") {
+    return [
+      ["STATUS", item.status || (item.enabled === false ? "disabled" : "ready")],
+      ["TRANSPORT", item.transport || "stdio"],
+      ["ENDPOINT", item.endpoint || item.command || "LOCAL"],
+      ["ENV", Array.isArray(item.env_keys) && item.env_keys.length ? item.env_keys.join(", ") : "NONE"],
+    ];
   }
-  return parts.slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  if (kind === "plugin") {
+    return [
+      ["STATUS", item.status || "ready"],
+      ["VERSION", item.version || "UNVERSIONED"],
+      ["DESCRIPTION", item.description || "NO DESCRIPTION"],
+      ["PATH", item.path || "LOCAL"],
+    ];
+  }
+  return [
+    ["STATUS", item.status || "ready"],
+    ["SOURCE", item.source || "unknown"],
+    ["DESCRIPTION", item.description || "NO DESCRIPTION"],
+    ["PATH", item.path || "LOCAL"],
+  ];
 }
 
+function positionDetail(x, y) {
+  const rect = ui.detailPopover.getBoundingClientRect();
+  const gap = 16;
+  let left = x + gap;
+  let top = y + gap;
+  if (left + rect.width > window.innerWidth - 12) left = Math.max(12, x - rect.width - gap);
+  if (top + rect.height > window.innerHeight - 12) top = Math.max(12, y - rect.height - gap);
+  ui.detailPopover.style.left = `${left}px`;
+  ui.detailPopover.style.top = `${top}px`;
+}
 
+function showDetail(card, kind, item, x, y) {
+  if (!item) return;
+  ui.detailPopover.replaceChildren();
+  const title = document.createElement("h3");
+  title.textContent = item.name || "UNNAMED ITEM";
+  const type = document.createElement("div");
+  type.className = "popover-kind";
+  type.textContent = `${kind.toUpperCase()} // DETAIL`;
+  const fields = document.createElement("dl");
+  detailFields(kind, item).forEach(([label, value]) => {
+    const key = document.createElement("dt");
+    key.textContent = label;
+    const text = document.createElement("dd");
+    text.textContent = compactText(value, "NO DATA", 260);
+    fields.append(key, text);
+  });
+  ui.detailPopover.append(title, type, fields);
+  ui.detailPopover.hidden = false;
+  ui.detailPopover.classList.add("is-visible");
+  positionDetail(x, y);
+}
+
+function bindDetail(card, kind, item) {
+  card.tabIndex = 0;
+  card.setAttribute("aria-describedby", "detail-popover");
+  card.addEventListener("pointerenter", (event) => showDetail(card, kind, item, event.clientX, event.clientY));
+  card.addEventListener("pointermove", (event) => {
+    if (!ui.detailPopover.hidden) positionDetail(event.clientX, event.clientY);
+  });
+  card.addEventListener("pointerleave", hideDetail);
+  card.addEventListener("focus", () => {
+    const rect = card.getBoundingClientRect();
+    showDetail(card, kind, item, rect.right, rect.top + rect.height / 2);
+  });
+  card.addEventListener("blur", hideDetail);
+}
 function statusClass(status) {
-  if (status === "error") {
-    return "error";
-  }
-  if (status === "disabled") {
-    return "disabled";
-  }
+  if (status === "error") return "error";
+  if (status === "disabled") return "disabled";
   return "";
 }
 
-
-function createEmpty(message) {
-  const fragment = document.getElementById("empty-template").content.cloneNode(true);
-  fragment.querySelector("p").textContent = message;
-  return fragment;
+function makeEmptySlot(extraClass = "") {
+  const slot = document.getElementById("empty-slot-template").content.firstElementChild.cloneNode(true);
+  if (extraClass) slot.classList.add(extraClass);
+  return slot;
 }
 
-
-function createLoadoutItem(item, type) {
-  const article = document.createElement("article");
-  article.className = `loadout-item loadout-${type}`;
-
-  const icon = document.createElement("span");
-  icon.className = `item-icon${type === "plugin" ? " plugin" : ""}`;
-  icon.setAttribute("aria-hidden", "true");
-  icon.textContent = initials(item.name, type === "plugin" ? "PL" : "MC");
-
-  const copy = document.createElement("div");
-  copy.className = "item-copy";
-  const name = document.createElement("strong");
-  name.textContent = item.name || "UNNAMED MODULE";
-  const detail = document.createElement("small");
-  if (type === "plugin") {
-    detail.textContent = item.version ? `CYBERWARE // ${item.version}` : "CYBERWARE MODULE";
-  } else {
-    detail.textContent = `TOOL // ${item.endpoint || item.command || item.transport || "MCP"}`;
-  }
-  copy.append(name, detail);
-
-  const status = document.createElement("span");
-  const itemStatus = item.status || (item.enabled === false ? "disabled" : "ready");
-  status.className = `status-dot ${statusClass(itemStatus)}`.trim();
-  status.setAttribute("aria-label", itemStatus === "ready" ? "在线" : itemStatus);
-
-  article.append(icon, copy, status);
-  return article;
-}
-
-
-function createSkillItem(item, index) {
-  const article = document.createElement("article");
-  const sourceClass = String(item.source || "unknown").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
-  article.className = `skill-item skill-${sourceClass}`;
-
-  const head = document.createElement("div");
-  head.className = "skill-head";
-
-  const key = document.createElement("span");
-  key.className = "skill-key";
-  key.setAttribute("aria-hidden", "true");
-  key.textContent = `S${String(index + 1).padStart(2, "0")}`;
-
-  const title = document.createElement("div");
-  title.className = "skill-copy";
-  const name = document.createElement("strong");
-  name.textContent = item.name || "UNNAMED CHIP";
-  title.append(name);
-  head.append(key, title);
-
-  const body = document.createElement("div");
-  body.className = "skill-copy";
-  const description = document.createElement("p");
-  description.textContent = compactText(item.description, "NO DESCRIPTION", 132);
-  body.append(description);
-
-  const source = document.createElement("span");
-  source.className = "source-label";
-  source.textContent = sourceNames[item.source] || item.source || "UNKNOWN CHIP";
-
-  article.append(head, body, source);
-  return article;
-}
-
-
-function createMissionItem(item, index) {
-  const article = document.createElement("article");
-  article.className = "mission-item";
-
-  const number = document.createElement("span");
-  number.className = "mission-index";
-  number.textContent = `JOB.${String(index + 1).padStart(2, "0")}`;
-
-  const copy = document.createElement("div");
-  copy.className = "mission-copy";
-  const name = document.createElement("strong");
-  name.textContent = item.name || "UNNAMED CONTRACT";
-  const schedule = document.createElement("p");
-  schedule.textContent = compactText(item.schedule, item.kind || "LOCAL AUTOMATION", 88);
-  copy.append(name, schedule);
-
-  const status = document.createElement("span");
-  const isError = item.status === "error";
-  status.className = `status-label${isError ? " error" : ""}`;
-  status.textContent = isError ? "ERROR" : (item.status || "ACTIVE").toUpperCase();
-
-  article.append(number, copy, status);
-  return article;
-}
-
-
-function renderCollection(element, items, factory, emptyMessage) {
-  clear(element);
-  if (!items.length) {
-    element.append(createEmpty(emptyMessage));
-    return;
-  }
+function fillSlots(container, items, capacity, factory, extraClass = "") {
+  container.replaceChildren();
   const fragment = document.createDocumentFragment();
-  items.forEach((item, index) => fragment.append(factory(item, index)));
+  for (let index = 0; index < capacity; index += 1) {
+    fragment.append(items[index] ? factory(items[index], index) : makeEmptySlot(extraClass));
+  }
+  container.append(fragment);
+}
+
+function pageSlice(key) {
+  const totalPages = Math.max(1, Math.ceil(data[key].length / PAGE_SIZE[key]));
+  pages[key] = Math.min(Math.max(0, pages[key]), totalPages - 1);
+  const start = pages[key] * PAGE_SIZE[key];
+  return { items: data[key].slice(start, start + PAGE_SIZE[key]), start, totalPages };
+}
+
+function pageSequence(current, total) {
+  if (total <= 5) return Array.from({ length: total }, (_, index) => index);
+  const values = new Set([0, 1, total - 2, total - 1, current - 1, current, current + 1]);
+  return [...values].filter((value) => value >= 0 && value < total).sort((a, b) => a - b);
+}
+
+function renderPageStrip(element, current, total, onSelect) {
+  element.replaceChildren();
+  const fragment = document.createDocumentFragment();
+  let previous = -1;
+  pageSequence(current, total).forEach((page) => {
+    if (previous >= 0 && page - previous > 1) {
+      const ellipsis = document.createElement("span");
+      ellipsis.className = "page-ellipsis";
+      ellipsis.textContent = "…";
+      fragment.append(ellipsis);
+    }
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `page-link${page === current ? " is-current" : ""}`;
+    button.textContent = String(page + 1);
+    button.setAttribute("aria-label", `第 ${page + 1} 页`);
+    button.setAttribute("aria-current", page === current ? "page" : "false");
+    button.addEventListener("click", () => onSelect(page));
+    fragment.append(button);
+    previous = page;
+  });
   element.append(fragment);
 }
 
-
-function renderLoadout() {
-  clear(ui.mcpList);
-  clear(ui.pluginList);
-
-  if (!loadoutItems.length) {
-    loadoutPage = 0;
-    ui.mcpSection.hidden = false;
-    ui.pluginSection.hidden = true;
-    ui.mcpList.append(createEmpty("未检测到可用模组"));
-    ui.loadoutPageNumber.textContent = "00 / 00";
-    ui.loadoutPageProgress.style.width = "0%";
-    ui.loadoutPrev.disabled = true;
-    ui.loadoutNext.disabled = true;
-    return;
-  }
-
-  const totalPages = Math.ceil(loadoutItems.length / LOADOUT_ITEMS_PER_PAGE);
-  loadoutPage = Math.min(Math.max(loadoutPage, 0), totalPages - 1);
-  const start = loadoutPage * LOADOUT_ITEMS_PER_PAGE;
-  const pageItems = loadoutItems.slice(start, start + LOADOUT_ITEMS_PER_PAGE);
-  const mcpFragment = document.createDocumentFragment();
-  const pluginFragment = document.createDocumentFragment();
-  let mcpCount = 0;
-  let pluginCount = 0;
-
-  pageItems.forEach(({ item, type }) => {
-    if (type === "mcp") {
-      mcpFragment.append(createLoadoutItem(item, type));
-      mcpCount += 1;
-    } else {
-      pluginFragment.append(createLoadoutItem(item, type));
-      pluginCount += 1;
-    }
+function updatePager(key, totalPages, elements, render) {
+  const current = pages[key];
+  elements.total.textContent = String(data[key].length);
+  elements.pageTotal.textContent = `/ ${totalPages}`;
+  elements.prev.disabled = current === 0;
+  elements.next.disabled = current === totalPages - 1;
+  renderPageStrip(elements.pageNumber, current, totalPages, (page) => {
+    pages[key] = page;
+    render();
   });
-
-  ui.mcpSection.hidden = mcpCount === 0;
-  ui.pluginSection.hidden = pluginCount === 0;
-  ui.mcpList.append(mcpFragment);
-  ui.pluginList.append(pluginFragment);
-
-  const currentLabel = String(loadoutPage + 1).padStart(2, "0");
-  const totalLabel = String(totalPages).padStart(2, "0");
-  ui.loadoutPageNumber.textContent = `${currentLabel} / ${totalLabel}`;
-  ui.loadoutPageProgress.style.width = `${((loadoutPage + 1) / totalPages) * 100}%`;
-  ui.loadoutPrev.disabled = loadoutPage === 0;
-  ui.loadoutNext.disabled = loadoutPage === totalPages - 1;
 }
 
-
-function changeLoadoutPage(offset) {
-  const totalPages = Math.ceil(loadoutItems.length / LOADOUT_ITEMS_PER_PAGE);
-  const nextPage = loadoutPage + offset;
-  if (nextPage < 0 || nextPage >= totalPages) {
-    return;
-  }
-  loadoutPage = nextPage;
-  renderLoadout();
+function createSkillCard(item, index) {
+  const card = document.createElement("article");
+  card.className = "data-card skill-card";
+  const number = document.createElement("span");
+  number.className = "card-index";
+  number.textContent = `S${String(index + 1).padStart(2, "0")}`;
+  const copy = document.createElement("div");
+  copy.className = "card-copy";
+  const name = document.createElement("strong");
+  name.textContent = item.name || "UNNAMED SKILL";
+  const detail = document.createElement("small");
+  detail.textContent = normalizedText(item.description, String(item.source || "SKILL").toUpperCase());
+  copy.append(name, detail);
+  const status = document.createElement("span");
+  status.className = `status-dot ${statusClass(item.status)}`.trim();
+  status.setAttribute("aria-label", item.status || "ready");
+  card.append(number, copy, status);
+  bindDetail(card, "skill", item);
+  return card;
 }
 
+function createMcpCard(item, index) {
+  const card = document.createElement("article");
+  card.className = "data-card mcp-card";
+  const top = document.createElement("div");
+  top.className = "card-top";
+  const number = document.createElement("span");
+  number.className = "card-index";
+  number.textContent = `M${String(index + 1).padStart(2, "0")}`;
+  const status = document.createElement("span");
+  status.className = `status-dot ${statusClass(item.status)}`.trim();
+  status.setAttribute("aria-label", item.status || "ready");
+  top.append(number, status);
+  const copy = document.createElement("div");
+  copy.className = "card-copy";
+  const name = document.createElement("strong");
+  name.textContent = item.name || "UNNAMED MCP";
+  const detail = document.createElement("small");
+  detail.textContent = `${String(item.transport || "MCP").toUpperCase()} // ${item.endpoint || item.command || "LOCAL"}`;
+  copy.append(name, detail);
+  card.append(top, copy);
+  bindDetail(card, "mcp", item);
+  return card;
+}
+
+function createPluginCard(item, index) {
+  const card = document.createElement("article");
+  card.className = "plugin-card";
+  const number = document.createElement("span");
+  number.className = "card-index";
+  number.textContent = `P${String(index + 1).padStart(2, "0")}`;
+  const copy = document.createElement("div");
+  copy.className = "card-copy";
+  const name = document.createElement("strong");
+  name.textContent = item.name || "UNNAMED PLUGIN";
+  const detail = document.createElement("small");
+  detail.textContent = item.version ? `VERSION // ${item.version}` : compactText(item.description, "PLUGIN", 36);
+  copy.append(name, detail);
+  const status = document.createElement("span");
+  status.className = `status-dot ${statusClass(item.status)}`.trim();
+  status.setAttribute("aria-label", item.status || "ready");
+  card.append(number, copy, status);
+  bindDetail(card, "plugin", item);
+  return card;
+}
+
+function createMissionCard(item, index) {
+  const card = document.createElement("button");
+  card.type = "button";
+  card.className = `mission-item${item.id === selectedMissionId ? " is-selected" : ""}`;
+  const inner = document.createElement("span");
+  inner.className = "mission-item-inner";
+  const number = document.createElement("span");
+  number.className = "mission-index";
+  number.textContent = `JOB.${String(index + 1).padStart(2, "0")}`;
+  const copy = document.createElement("span");
+  copy.className = "mission-copy";
+  const name = document.createElement("strong");
+  name.textContent = item.name || "UNNAMED TASK";
+  const schedule = document.createElement("small");
+  schedule.textContent = compactText(item.schedule, item.kind || "SCHEDULED", 62);
+  copy.append(name, schedule);
+  const status = document.createElement("span");
+  status.className = `status-label${item.status === "error" ? " error" : ""}`;
+  status.textContent = item.status || "active";
+  inner.append(number, copy, status);
+  card.append(inner);
+  card.addEventListener("click", () => {
+    selectedMissionId = item.id;
+    renderMissions();
+  });
+  return card;
+}
+
+let skillClampFrame = null;
+let skillListResizeObserver = null;
+
+function fitSkillDescriptions() {
+  ui.skillList.querySelectorAll(".skill-card:not(.is-empty) .card-copy small").forEach((detail) => {
+    detail.style.removeProperty("-webkit-line-clamp");
+    const copyRect = detail.parentElement.getBoundingClientRect();
+    const detailRect = detail.getBoundingClientRect();
+    const lineHeight = Number.parseFloat(getComputedStyle(detail).lineHeight);
+    if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
+
+    const availableHeight = copyRect.bottom - detailRect.top;
+    const visibleLines = Math.max(1, Math.floor(availableHeight / lineHeight));
+    detail.style.setProperty("-webkit-line-clamp", String(visibleLines));
+  });
+}
+
+function scheduleSkillDescriptionFit() {
+  if (skillClampFrame !== null) cancelAnimationFrame(skillClampFrame);
+  skillClampFrame = requestAnimationFrame(() => {
+    skillClampFrame = null;
+    fitSkillDescriptions();
+  });
+}
 
 function renderSkills() {
-  clear(ui.skillList);
+  hideDetail();
+  const page = pageSlice("skills");
+  fillSlots(ui.skillList, page.items, PAGE_SIZE.skills, (item, index) => createSkillCard(item, page.start + index), "skill-card");
+  updatePager("skills", page.totalPages, { total: ui.skillTotal, prev: ui.skillPrev, next: ui.skillNext, pageNumber: ui.skillPageNumber, pageTotal: ui.skillPageTotal }, renderSkills);
+  scheduleSkillDescriptionFit();
+}
 
-  if (!skillItems.length) {
-    skillPage = 0;
-    ui.skillList.append(createEmpty("未检测到能力芯片"));
-    ui.skillPageStatus.textContent = "PAGE 00 / 00";
-    ui.skillPageNumber.textContent = "00 / 00";
-    ui.skillPageProgress.style.width = "0%";
-    ui.skillPrev.disabled = true;
-    ui.skillNext.disabled = true;
-    return;
-  }
+function renderMcp() {
+  hideDetail();
+  const page = pageSlice("mcp");
+  fillSlots(ui.mcpList, page.items, PAGE_SIZE.mcp, (item, index) => createMcpCard(item, page.start + index), "mcp-card");
+  updatePager("mcp", page.totalPages, { total: ui.mcpTotal, prev: ui.mcpPrev, next: ui.mcpNext, pageNumber: ui.mcpPageNumber, pageTotal: ui.mcpPageTotal }, renderMcp);
+}
 
-  const totalPages = Math.ceil(skillItems.length / SKILLS_PER_PAGE);
-  skillPage = Math.min(Math.max(skillPage, 0), totalPages - 1);
-  const start = skillPage * SKILLS_PER_PAGE;
-  const pageItems = skillItems.slice(start, start + SKILLS_PER_PAGE);
-  const fragment = document.createDocumentFragment();
+function renderPlugins() {
+  hideDetail();
+  const page = pageSlice("plugins");
+  const left = page.items.slice(0, 6);
+  const right = page.items.slice(6, 12);
+  fillSlots(ui.pluginLeft, left, 6, (item, index) => createPluginCard(item, page.start + index), "plugin-card");
+  fillSlots(ui.pluginRight, right, 6, (item, index) => createPluginCard(item, page.start + 6 + index), "plugin-card");
+  updatePager("plugins", page.totalPages, { total: ui.pluginTotal, prev: ui.pluginPrev, next: ui.pluginNext, pageNumber: ui.pluginPageNumber, pageTotal: ui.pluginPageTotal }, renderPlugins);
+}
 
-  pageItems.forEach((item, index) => {
-    fragment.append(createSkillItem(item, start + index));
+function renderMissionDetail(item) {
+  ui.missionDetail.replaceChildren();
+  const content = document.createElement("div");
+  content.className = "detail-content";
+  const kicker = document.createElement("span");
+  kicker.className = "detail-kicker";
+  kicker.textContent = `TASK DETAIL // ${item.id || "LOCAL"}`;
+  const name = document.createElement("h2");
+  name.textContent = item.name || "UNNAMED TASK";
+  const status = document.createElement("span");
+  status.className = `detail-status${item.status === "error" ? " error" : ""}`;
+  status.textContent = String(item.status || "active").toUpperCase();
+  const grid = document.createElement("div");
+  grid.className = "detail-grid";
+  [["TYPE", item.kind || "scheduled"], ["SCHEDULE", compactText(item.schedule, "未配置计划", 120)], ["SOURCE", item.path || "LOCAL"], ["IDENTIFIER", item.id || "UNKNOWN"]].forEach(([label, value]) => {
+    const cell = document.createElement("div");
+    const key = document.createElement("span");
+    key.textContent = label;
+    const text = document.createElement("strong");
+    text.textContent = value;
+    cell.append(key, text);
+    grid.append(cell);
   });
-  ui.skillList.append(fragment);
-
-  const currentLabel = String(skillPage + 1).padStart(2, "0");
-  const totalLabel = String(totalPages).padStart(2, "0");
-  ui.skillPageStatus.textContent = `PAGE ${currentLabel} / ${totalLabel}`;
-  ui.skillPageNumber.textContent = `${currentLabel} / ${totalLabel}`;
-  ui.skillPageProgress.style.width = `${((skillPage + 1) / totalPages) * 100}%`;
-  ui.skillPrev.disabled = skillPage === 0;
-  ui.skillNext.disabled = skillPage === totalPages - 1;
+  content.append(kicker, name, status, grid);
+  ui.missionDetail.append(content);
 }
 
-
-function changeSkillPage(offset) {
-  const totalPages = Math.ceil(skillItems.length / SKILLS_PER_PAGE);
-  const nextPage = skillPage + offset;
-  if (nextPage < 0 || nextPage >= totalPages) {
-    return;
+function renderMissions() {
+  const page = pageSlice("missions");
+  if (page.items.length && !page.items.some((item) => item.id === selectedMissionId)) selectedMissionId = page.items[0].id;
+  ui.missionList.replaceChildren();
+  const fragment = document.createDocumentFragment();
+  for (let index = 0; index < PAGE_SIZE.missions; index += 1) {
+    fragment.append(page.items[index] ? createMissionCard(page.items[index], page.start + index) : makeEmptySlot("mission-item"));
   }
-  skillPage = nextPage;
-  renderSkills();
+  ui.missionList.append(fragment);
+  const selected = page.items.find((item) => item.id === selectedMissionId);
+  if (selected) {
+    renderMissionDetail(selected);
+  } else {
+    ui.missionDetail.innerHTML = '<span class="detail-kicker">TASK DETAIL</span><div class="detail-empty">暂无定时任务</div>';
+  }
+  updatePager("missions", page.totalPages, { total: ui.missionTotal, prev: ui.missionPrev, next: ui.missionNext, pageNumber: ui.missionPageNumber, pageTotal: ui.missionPageTotal }, renderMissions);
 }
 
-
-function characterTitle(skillCount, gearCount, missionCount) {
-  if (missionCount >= 3) {
-    return "自动化佣兵";
-  }
-  if (skillCount >= 12 && gearCount >= 4) {
-    return "全栈构筑者";
-  }
-  if (skillCount >= 8) {
-    return "神经网络行者";
-  }
-  if (gearCount >= 3) {
-    return "模组专家";
-  }
-  return "配置探索者";
+function changePage(key, offset, render) {
+  const totalPages = Math.max(1, Math.ceil(data[key].length / PAGE_SIZE[key]));
+  const next = pages[key] + offset;
+  if (next < 0 || next >= totalPages) return;
+  pages[key] = next;
+  render();
 }
-
 
 function renderState(state) {
-  const skills = Array.isArray(state.skills) ? state.skills : [];
-  const mcpServers = Array.isArray(state.mcp_servers) ? state.mcp_servers : [];
-  const plugins = Array.isArray(state.plugins) ? state.plugins : [];
-  const automations = Array.isArray(state.automations) ? state.automations : [];
+  data.skills = Array.isArray(state.skills) ? state.skills : [];
+  data.mcp = Array.isArray(state.mcp_servers) ? state.mcp_servers : [];
+  data.plugins = Array.isArray(state.plugins) ? state.plugins : [];
+  data.missions = Array.isArray(state.automations) ? state.automations : [];
   const agents = Array.isArray(state.agents) ? state.agents : [];
   const errors = Array.isArray(state.errors) ? state.errors : [];
-  const gearCount = mcpServers.length + plugins.length;
-  const level = Math.min(99, Math.max(1, skills.length + gearCount + automations.length));
+  const gearCount = data.mcp.length + data.plugins.length;
+  const buildId = `CG-${String(data.skills.length * 13 + gearCount * 7 + agents.length).padStart(3, "0")}`;
 
-  loadoutItems = [
-    ...mcpServers.map((item) => ({ item, type: "mcp" })),
-    ...plugins.map((item) => ({ item, type: "plugin" })),
-  ];
-  renderLoadout();
-  skillItems = skills;
   renderSkills();
-  renderCollection(ui.missionList, automations, createMissionItem, "当前无活动委托");
+  renderMcp();
+  renderPlugins();
+  renderMissions();
 
-  ui.equipmentCount.textContent = String(gearCount).padStart(2, "0");
-  ui.skillCount.textContent = String(skills.length).padStart(2, "0");
-  ui.skillStat.textContent = String(skills.length).padStart(2, "0");
+  ui.skillCount.textContent = String(data.skills.length).padStart(2, "0");
+  ui.mcpCount.textContent = String(data.mcp.length).padStart(2, "0");
+  ui.skillStat.textContent = String(data.skills.length).padStart(2, "0");
   ui.gearStat.textContent = String(gearCount).padStart(2, "0");
-  ui.missionStat.textContent = String(automations.length).padStart(2, "0");
-  ui.missionOverviewCount.textContent = String(automations.length).padStart(2, "0");
-  ui.characterLevel.textContent = String(level).padStart(2, "0");
-  ui.buildId.textContent = `CG-${String(skills.length * 13 + gearCount * 7 + agents.length).padStart(3, "0")}`;
-  ui.projectName.textContent = state.project || "LOCAL WORKSPACE";
-  ui.characterClass.textContent = characterTitle(skills.length, gearCount, automations.length);
-  ui.rulesStrip.textContent = agents.length
-    ? `AGENT PROTOCOL // ${agents.length} 份角色准则已接入`
-    : "AGENT PROTOCOL // 未检测到项目准则";
+  ui.missionStat.textContent = String(data.missions.length).padStart(2, "0");
+  ui.wardrobeBuildId.textContent = buildId;
+  ui.rulesStrip.textContent = agents.length ? `AGENT PROTOCOL ${agents.length}` : "LOCAL SKIN CONTROL";
 
   const scanDate = new Date(state.scanned_at);
-  ui.scanTime.textContent = Number.isNaN(scanDate.getTime())
-    ? "SCAN COMPLETE"
-    : `SYNC ${scanDate.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`;
-
+  ui.scanTime.textContent = Number.isNaN(scanDate.getTime()) ? "SCAN COMPLETE" : `SYNC ${scanDate.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`;
   if (errors.length) {
-    ui.notice.textContent = `WARNING // ${errors.length} 个数据源读取不完整，其余构筑已载入。`;
+    ui.notice.textContent = `WARNING // ${errors.length} 个数据源读取不完整`;
     ui.notice.className = "notice is-error";
   } else {
     ui.notice.textContent = "";
@@ -374,32 +472,32 @@ function renderState(state) {
   }
 }
 
-
 async function loadState() {
   ui.refreshButton.disabled = true;
   ui.refreshButton.classList.add("is-loading");
   ui.notice.textContent = "SCANNING // 正在读取本地 Codex 配置…";
   ui.notice.className = "notice";
-
   try {
     const response = await fetch("/api/state", { cache: "no-store" });
     const state = await response.json();
-    if (!response.ok) {
-      throw new Error(state.message || "扫描服务返回错误");
-    }
+    if (!response.ok) throw new Error(state.message || "扫描服务返回错误");
     renderState(state);
   } catch (error) {
     ui.notice.textContent = `LINK FAILURE // ${error.message}`;
     ui.notice.className = "notice is-error";
     ui.scanTime.textContent = "OFFLINE";
+    renderSkills();
+    renderMcp();
+    renderPlugins();
+    renderMissions();
   } finally {
     ui.refreshButton.disabled = false;
     ui.refreshButton.classList.remove("is-loading");
   }
 }
 
-
 function selectView(viewName) {
+  hideDetail();
   document.querySelectorAll(".tab").forEach((tab) => {
     const selected = tab.dataset.view === viewName;
     tab.classList.toggle("is-active", selected);
@@ -412,68 +510,298 @@ function selectView(viewName) {
   });
 }
 
-
-function applyAppearance(palette, display) {
-  document.body.dataset.palette = palette;
-  document.body.dataset.display = display;
-  ui.appearanceName.textContent = `${paletteNames[palette]} // ${displayNames[display]}`;
-  localStorage.setItem("cogame-appearance", JSON.stringify({ palette, display }));
-
-  document.querySelectorAll("[data-palette]").forEach((button) => {
-    const selected = button.dataset.palette === palette;
-    button.classList.toggle("is-selected", selected);
-    button.setAttribute("aria-pressed", String(selected));
-  });
-  document.querySelectorAll("[data-display]").forEach((button) => {
-    const selected = button.dataset.display === display;
-    button.classList.toggle("is-selected", selected);
-    button.setAttribute("aria-pressed", String(selected));
-  });
+function skinDimensions(skin) {
+  return skin.width && skin.height ? `${skin.width} × ${skin.height}` : "无法读取";
 }
 
+function createSkinRow(skin) {
+  const row = document.createElement("tr");
+  row.dataset.skinId = skin.id;
+  row.classList.toggle("is-error", !skin.valid);
 
-function currentAppearance() {
+  const imageCell = document.createElement("td");
+  const button = document.createElement("button");
+  button.className = "skin-select";
+  button.type = "button";
+  button.dataset.skinId = skin.id;
+  button.disabled = !skin.valid;
+  button.setAttribute("aria-pressed", "false");
+  button.setAttribute("aria-label", skin.valid ? `预览皮肤：${skin.name}` : `${skin.name}：${skin.error}`);
+
+  let thumbnail;
+  if (skin.valid && skin.url) {
+    thumbnail = document.createElement("img");
+    thumbnail.className = "skin-thumbnail";
+    thumbnail.src = skin.url;
+    thumbnail.alt = "";
+    thumbnail.loading = "lazy";
+    thumbnail.decoding = "async";
+  } else {
+    thumbnail = document.createElement("span");
+    thumbnail.className = "skin-thumbnail skin-thumbnail-error";
+    thumbnail.textContent = "ERR";
+    thumbnail.setAttribute("aria-hidden", "true");
+  }
+
+  const copy = document.createElement("span");
+  copy.className = "skin-row-copy";
+  const name = document.createElement("strong");
+  name.textContent = skin.name;
+  const description = document.createElement("small");
+  description.className = "skin-description";
+  description.textContent = skin.valid ? skin.description : skin.error;
+  const source = document.createElement("small");
+  source.className = "skin-source";
+  source.textContent = `${skin.filename} · ${skin.source}`;
+  copy.append(name, description, source);
+  button.append(thumbnail, copy);
+  imageCell.append(button);
+
+  const formatCell = document.createElement("td");
+  formatCell.textContent = skin.format;
+  const dimensionsCell = document.createElement("td");
+  dimensionsCell.textContent = skinDimensions(skin);
+  const statusCell = document.createElement("td");
+  const status = document.createElement("span");
+  status.className = `skin-status${skin.valid ? "" : " error"}`;
+  status.textContent = skin.valid ? "可用" : "错误";
+  statusCell.append(status);
+
+  row.append(imageCell, formatCell, dimensionsCell, statusCell);
+  return row;
+}
+
+function renderSkinTable() {
+  if (!skins.length) {
+    const row = document.createElement("tr");
+    row.className = "skin-empty-row";
+    const cell = document.createElement("td");
+    cell.colSpan = 4;
+    cell.textContent = "皮肤目录中没有图片资源";
+    row.append(cell);
+    ui.skinTableBody.replaceChildren(row);
+  } else {
+    ui.skinTableBody.replaceChildren(...skins.map(createSkinRow));
+  }
+  const invalidCount = skins.filter((skin) => !skin.valid).length;
+  ui.skinTotal.textContent = skins.length;
+  ui.skinCatalogStatus.textContent = `${skins.length} FILES${invalidCount ? ` · ${invalidCount} ERRORS` : ""}`;
+  updateSkinActions();
+}
+
+function showEmptySkin(title, detail, isError = false) {
+  selectedSkinId = null;
+  ui.wardrobeAvatar.removeAttribute("src");
+  ui.wardrobeAvatar.hidden = true;
+  ui.wardrobePreview.classList.toggle("is-image-error", isError);
+  ui.appearanceName.textContent = title;
+  ui.skinPreviewMeta.textContent = detail;
+  updateSkinActions();
+}
+
+function selectSkin(skinId) {
+  const skin = skins.find((item) => item.id === skinId && item.valid);
+  if (!skin) return;
+
+  selectedSkinId = skin.id;
+  ui.wardrobeAvatar.hidden = false;
+  ui.wardrobePreview.classList.remove("is-image-error");
+  ui.wardrobeAvatar.src = skin.url;
+  ui.wardrobeAvatar.alt = `${skin.name}皮肤预览`;
+  ui.appearanceName.textContent = skin.name;
+  ui.skinPreviewMeta.textContent = `${skin.format} · ${skinDimensions(skin)} · ${skin.source}`;
+  localStorage.setItem("cogame-selected-skin", skin.id);
+
+  ui.skinTableBody.querySelectorAll("tr[data-skin-id]").forEach((row) => {
+    const selected = row.dataset.skinId === skin.id;
+    row.classList.toggle("is-selected", selected);
+    row.querySelector(".skin-select").setAttribute("aria-pressed", String(selected));
+  });
+  updateSkinActions();
+}
+
+function currentSkinId() {
+  const saved = localStorage.getItem("cogame-selected-skin");
+  const savedSkin = skins.find((skin) => skin.id === saved && skin.valid);
+  return savedSkin?.id || skins.find((skin) => skin.valid)?.id || null;
+}
+
+function updateSkinActions() {
+  const selected = skins.find((skin) => skin.id === selectedSkinId && skin.valid);
+  ui.applySkin.disabled = skinActionBusy || !skinRuntimeStatus?.ready || !selected;
+  ui.restoreSkin.disabled = skinActionBusy || !skinRuntimeStatus?.ready;
+}
+
+function setSkinRuntimeStatus(status) {
+  skinRuntimeStatus = status;
+  skinActionToken = status?.action_token || skinActionToken;
+  const ready = Boolean(status?.ready);
+  ui.skinRuntimeIndicator.classList.toggle("is-ready", ready);
+  ui.skinRuntimeIndicator.classList.toggle("is-error", !ready);
+  ui.skinRuntimeLabel.textContent = ready ? "运行环境就绪" : "运行环境未就绪";
+  if (ready) {
+    const session = status.session_configured ? "已配置会话" : "等待首次启动";
+    ui.skinRuntimeDetail.textContent = `CODEX ${status.codex_version} · NODE ${status.node_version} · ${session}`;
+  } else {
+    ui.skinRuntimeDetail.textContent = status?.requirements?.join(" · ") || "无法读取 Dream Skin 状态";
+  }
+  updateSkinActions();
+}
+
+async function loadSkinCatalog() {
+  ui.skinCatalogStatus.textContent = "SCANNING";
   try {
-    const saved = JSON.parse(localStorage.getItem("cogame-appearance"));
-    return {
-      palette: paletteNames[saved?.palette] ? saved.palette : "night",
-      display: displayNames[saved?.display] ? saved.display : "standard",
-    };
-  } catch {
-    return { palette: "night", display: "standard" };
+    const response = await fetch("/api/skins", { cache: "no-store" });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.message || "皮肤目录扫描失败");
+    skins = Array.isArray(payload.skins) ? payload.skins : [];
+    renderSkinTable();
+
+    const warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
+    const invalidCount = skins.filter((skin) => !skin.valid).length;
+    const messages = [...warnings];
+    if (invalidCount) messages.push(`${invalidCount} 个皮肤文件无法使用，请查看错误行`);
+    ui.skinCatalogWarning.textContent = messages.join("；");
+    ui.skinCatalogWarning.hidden = !messages.length;
+
+    const initialSkinId = currentSkinId();
+    if (initialSkinId) {
+      selectSkin(initialSkinId);
+    } else {
+      showEmptySkin("没有可用皮肤", skins.length ? "请修复表格中的图片错误" : "将 PNG、JPEG 或 WebP 放入皮肤目录", true);
+    }
+  } catch (error) {
+    skins = [];
+    renderSkinTable();
+    ui.skinCatalogStatus.textContent = "SCAN FAILED";
+    ui.skinCatalogWarning.textContent = error.message;
+    ui.skinCatalogWarning.hidden = false;
+    showEmptySkin("扫描失败", error.message, true);
   }
 }
 
+async function loadSkinRuntimeStatus() {
+  try {
+    const response = await fetch("/api/skins/status", { cache: "no-store" });
+    const status = await response.json();
+    if (!response.ok) throw new Error(status.message || "运行环境检测失败");
+    setSkinRuntimeStatus(status);
+  } catch (error) {
+    setSkinRuntimeStatus({ ready: false, requirements: [error.message] });
+  }
+}
 
-document.querySelectorAll(".tab").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    selectView(tab.dataset.view);
-    history.replaceState(null, "", `#${tab.dataset.view}`);
+function setSkinActionBusy(busy, action = "") {
+  skinActionBusy = busy;
+  ui.applySkin.textContent = busy && action === "apply" ? "正在应用" : "应用皮肤";
+  ui.restoreSkin.textContent = busy && action === "restore" ? "正在恢复" : "恢复官方外观";
+  updateSkinActions();
+}
+
+async function requestSkinAction(route, payload) {
+  if (!skinActionToken) throw new Error("操作令牌缺失，请刷新页面后重试");
+  const response = await fetch(route, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CoGame-Action-Token": skinActionToken,
+    },
+    body: JSON.stringify(payload),
   });
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    result = { message: "服务返回了无法识别的响应" };
+  }
+  if (!response.ok) {
+    const error = new Error(result.message || "Dream Skin 操作失败");
+    error.runtimeStatus = result.status;
+    throw error;
+  }
+  return result;
+}
+
+function showSkinActionNotice(message, isError = false) {
+  ui.notice.textContent = `${isError ? "SKIN FAILURE" : "SKIN READY"} // ${message}`;
+  ui.notice.className = `notice${isError ? " is-error" : ""}`;
+}
+
+async function applySelectedSkin() {
+  const skin = skins.find((item) => item.id === selectedSkinId && item.valid);
+  if (!skin || !skinRuntimeStatus?.ready || skinActionBusy) return;
+  if (!window.confirm(`应用“${skin.name}”可能会重启 Codex，未发送的输入可能丢失。继续吗？`)) return;
+
+  setSkinActionBusy(true, "apply");
+  try {
+    const result = await requestSkinAction("/api/skins/apply", { skin_id: skin.id, restart_existing: true });
+    showSkinActionNotice(result.message || `已应用：${skin.name}`);
+    await loadSkinRuntimeStatus();
+  } catch (error) {
+    if (error.runtimeStatus) setSkinRuntimeStatus(error.runtimeStatus);
+    showSkinActionNotice(error.message, true);
+  } finally {
+    setSkinActionBusy(false);
+  }
+}
+
+async function restoreOfficialSkin() {
+  if (!skinRuntimeStatus?.ready || skinActionBusy) return;
+  if (!window.confirm("恢复官方外观会关闭 Dream Skin 会话并重启 Codex。继续吗？")) return;
+
+  setSkinActionBusy(true, "restore");
+  try {
+    const result = await requestSkinAction("/api/skins/restore", { restart_existing: true });
+    showSkinActionNotice(result.message || "已恢复官方外观");
+    await loadSkinRuntimeStatus();
+  } catch (error) {
+    if (error.runtimeStatus) setSkinRuntimeStatus(error.runtimeStatus);
+    showSkinActionNotice(error.message, true);
+  } finally {
+    setSkinActionBusy(false);
+  }
+}
+
+async function refreshAll() {
+  await Promise.allSettled([loadState(), loadSkinCatalog(), loadSkinRuntimeStatus()]);
+}
+document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
+  selectView(tab.dataset.view);
+  history.replaceState(null, "", `#${tab.dataset.view}`);
+}));
+ui.skinTableBody.addEventListener("click", (event) => {
+  const row = event.target.closest("tr[data-skin-id]");
+  if (row) selectSkin(row.dataset.skinId);
+});
+ui.wardrobeAvatar.addEventListener("load", () => ui.wardrobePreview.classList.remove("is-image-error"));
+ui.wardrobeAvatar.addEventListener("error", () => {
+  ui.wardrobePreview.classList.add("is-image-error");
+  ui.skinPreviewMeta.textContent = "图片无法载入";
+});
+ui.skillPrev.addEventListener("click", () => changePage("skills", -1, renderSkills));
+ui.skillNext.addEventListener("click", () => changePage("skills", 1, renderSkills));
+ui.mcpPrev.addEventListener("click", () => changePage("mcp", -1, renderMcp));
+ui.mcpNext.addEventListener("click", () => changePage("mcp", 1, renderMcp));
+ui.pluginPrev.addEventListener("click", () => changePage("plugins", -1, renderPlugins));
+ui.pluginNext.addEventListener("click", () => changePage("plugins", 1, renderPlugins));
+ui.missionPrev.addEventListener("click", () => changePage("missions", -1, renderMissions));
+ui.missionNext.addEventListener("click", () => changePage("missions", 1, renderMissions));
+ui.applySkin.addEventListener("click", applySelectedSkin);
+ui.restoreSkin.addEventListener("click", restoreOfficialSkin);
+ui.refreshButton.addEventListener("click", refreshAll);
+
+if ("ResizeObserver" in window) {
+  skillListResizeObserver = new ResizeObserver(scheduleSkillDescriptionFit);
+  skillListResizeObserver.observe(ui.skillList);
+} else {
+  window.addEventListener("resize", scheduleSkillDescriptionFit);
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") hideDetail();
 });
 
-document.querySelectorAll("[data-palette]").forEach((button) => {
-  button.addEventListener("click", () => {
-    applyAppearance(button.dataset.palette, document.body.dataset.display || "standard");
-  });
-});
-
-document.querySelectorAll("[data-display]").forEach((button) => {
-  button.addEventListener("click", () => {
-    applyAppearance(document.body.dataset.palette || "night", button.dataset.display);
-  });
-});
-
-ui.skillPrev.addEventListener("click", () => changeSkillPage(-1));
-ui.skillNext.addEventListener("click", () => changeSkillPage(1));
-ui.loadoutPrev.addEventListener("click", () => changeLoadoutPage(-1));
-ui.loadoutNext.addEventListener("click", () => changeLoadoutPage(1));
-ui.refreshButton.addEventListener("click", loadState);
-
-const initialView = ["dashboard", "missions", "wardrobe"].includes(location.hash.slice(1))
-  ? location.hash.slice(1)
-  : "dashboard";
-const appearance = currentAppearance();
+const hashView = location.hash.slice(1) === "dashboard" ? "equipment" : location.hash.slice(1);
+const initialView = ["equipment", "plugins", "missions", "wardrobe"].includes(hashView) ? hashView : "equipment";
 selectView(initialView);
-applyAppearance(appearance.palette, appearance.display);
-loadState();
+refreshAll();
