@@ -158,7 +158,7 @@ CoGame 只读取展示所需的本地信息：
 | MCP Servers | `$CODEX_HOME/config.toml` 中的 `mcp_servers`                         |
 | Plugins     | `$CODEX_HOME/plugins/**/.codex-plugin/plugin.json`                 |
 | Automations | `$CODEX_HOME/automations/*/automation.toml`                        |
-| Rules       | 全局及当前项目路径中的 `AGENTS.md`                                            |
+| Rules       | 全局 `AGENTS.md`                                            |
 | Skins       | `static/skins/`                                                    |
 
 MCP 环境变量只展示键名，不返回对应的值。
