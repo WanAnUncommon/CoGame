@@ -1,6 +1,6 @@
 # CoGame
 
-[Chinese](./README.md) | [English](./README_EN.md)
+[中文](./README.md) | [English](./README_EN.md)
 
 **把本地 Codex 配置变成一套可浏览的游戏化装备面板。**
 
