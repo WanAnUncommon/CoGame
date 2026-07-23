@@ -1,6 +1,6 @@
 # CoGame
 
-[Chinese](./README.md) | [English](./README_EN.md)
+[中文](./README.md) | [English](./README_EN.md)
 
 **Turn your local Codex configuration into a browsable, game-inspired equipment dashboard.**
 
